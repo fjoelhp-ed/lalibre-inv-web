@@ -30,7 +30,7 @@ const defaultCodes = [
 ];
 
 // ============================================================================
-// COMPONENTE FLOTANTE: TUTORIAL (Onboarding original)
+// COMPONENTE FLOTANTE: TUTORIAL (Onboarding)
 // ============================================================================
 const TutorialPopup = ({ step, totalSteps, title, content, onNext, onPrev, onClose, positionClass, theme }) => {
   return (
@@ -359,54 +359,28 @@ export default function App() {
   const [view, setView] = useState('dashboard');
   const [activeProjectId, setActiveProjectId] = useState(null);
   
-  const [activeThemeName, setActiveThemeName] = useState('blue');
+  // NUEVO: Autoguardado del Tema en localStorage
+  const [activeThemeName, setActiveThemeName] = useState(() => {
+    return localStorage.getItem('lalibreinv_theme') || 'blue';
+  });
+  
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [iconModalProjectId, setIconModalProjectId] = useState(null);
-  
-  // Nuevo Estado: Modal de Instalación (PWA)
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
-  
-  // NUEVO: Estado para capturar el evento de instalación nativo del navegador
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
-  useEffect(() => {
-    // Escuchar si el navegador dice "¡Esta app se puede instalar!"
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault(); // Evita que Chrome muestre su propio mini-aviso automático
-      setDeferredPrompt(e); // Guardamos el evento para usarlo en nuestro propio botón
-    };
-    
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, []);
-
-  // NUEVO: Función inteligente para el botón de instalar
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      // Si el navegador lo soporta, mostramos la ventana REAL de instalación
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        setDeferredPrompt(null); // Ya se instaló, limpiamos el evento
+  // NUEVO: Autoguardado de Proyectos en localStorage
+  const [projects, setProjects] = useState(() => {
+    const saved = localStorage.getItem('lalibreinv_projects');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Error al cargar proyectos guardados:", e);
       }
-    } else {
-      // Si es Mac/Safari o ya está instalada, mostramos nuestro tutorial visual
-      setIsInstallModalOpen(true);
     }
-  };
-  
-  const [editingProjectNameId, setEditingProjectNameId] = useState(null);
-  const [newProjectName, setNewProjectName] = useState('');
-  
-  const [tutorialStep, setTutorialStep] = useState(0);
-
-  const iconFileInputRef = useRef(null);
-  const dashboardFileInputRef = useRef(null);
-
-  const theme = THEMES[activeThemeName] || THEMES.blue;
-
-  const [projects, setProjects] = useState([
-    {
+    // Si no hay nada guardado, carga el proyecto por defecto
+    return [{
       id: 1,
       name: "Investigación_Teletrabajo_2026",
       lastModified: new Date().toISOString(),
@@ -414,8 +388,48 @@ export default function App() {
       documents: defaultDocuments,
       codes: defaultCodes,
       quotes: []
+    }];
+  });
+
+  // Guardar en localStorage cada vez que cambien los proyectos
+  useEffect(() => {
+    localStorage.setItem('lalibreinv_projects', JSON.stringify(projects));
+  }, [projects]);
+
+  // Guardar en localStorage el tema elegido
+  useEffect(() => {
+    localStorage.setItem('lalibreinv_theme', activeThemeName);
+  }, [activeThemeName]);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault(); 
+      setDeferredPrompt(e); 
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    } else {
+      setIsInstallModalOpen(true);
     }
-  ]);
+  };
+  
+  const [editingProjectNameId, setEditingProjectNameId] = useState(null);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [tutorialStep, setTutorialStep] = useState(0);
+
+  const iconFileInputRef = useRef(null);
+  const dashboardFileInputRef = useRef(null);
+
+  const theme = THEMES[activeThemeName] || THEMES.blue;
 
   const handleCreateProject = () => {
     const newProject = { id: Date.now(), name: `Nuevo Proyecto ${projects.length + 1}`, lastModified: new Date().toISOString(), icon: { type: 'preset', value: 'FolderOpen' }, documents: [], codes: [], quotes: [] };
@@ -673,7 +687,6 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* NUEVO BOTÓN: INSTALAR APP CON LÓGICA NATIVA */}
             <button 
               onClick={handleInstallClick} 
               className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition-colors shadow-md mr-2" 
