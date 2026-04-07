@@ -4,7 +4,7 @@ import {
   X, Upload, FileSpreadsheet, FileJson, Edit2, Check, Search, Zap, 
   ArrowLeft, LayoutGrid, FolderPlus, FolderOpen, Pencil, Clock, 
   Settings, ImagePlus, Briefcase, Book, PieChart, Target, Star, Heart,
-  HelpCircle, ChevronRight, ChevronLeft, Sparkles
+  HelpCircle, ChevronRight, ChevronLeft, Sparkles, MonitorDown, Apple
 } from 'lucide-react';
 
 // --- PALETAS DE COLORES MODERNIZADAS (Con gradientes) ---
@@ -30,7 +30,7 @@ const defaultCodes = [
 ];
 
 // ============================================================================
-// COMPONENTE FLOTANTE: TUTORIAL
+// COMPONENTE FLOTANTE: TUTORIAL (Onboarding original)
 // ============================================================================
 const TutorialPopup = ({ step, totalSteps, title, content, onNext, onPrev, onClose, positionClass, theme }) => {
   return (
@@ -83,7 +83,6 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme }) {
   const [autoCodeSearch, setAutoCodeSearch] = useState('');
   const [autoCodeTargetId, setAutoCodeTargetId] = useState('');
   
-  // Tutorial State (Editor)
   const [tutorialStep, setTutorialStep] = useState(0);
 
   const textContainerRef = useRef(null);
@@ -193,7 +192,6 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme }) {
 
   const filteredQuotes = activeFilter ? quotes.filter(q => q.codeId === activeFilter) : quotes;
 
-  // Editor Tutorial Steps
   const editorTutorialSteps = [
     { title: "El Entorno de Trabajo", content: "Bienvenido al Editor. Aquí es donde analizarás tus textos. Vamos a dar un rápido recorrido.", pos: "top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" },
     { title: "Panel de Códigos", content: "A la izquierda tienes tus Códigos (o etiquetas). Úsalos para categorizar temas importantes en tu texto. Puedes crear nuevos o hacerles clic derecho para renombrarlos.", pos: "top-1/3 left-80" },
@@ -205,7 +203,6 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme }) {
   return (
     <div className="flex h-screen bg-slate-50 font-sans overflow-hidden">
       
-      {/* Overlay del Tutorial del Editor */}
       {tutorialStep > 0 && tutorialStep <= editorTutorialSteps.length && (
         <TutorialPopup 
           step={tutorialStep} 
@@ -366,10 +363,12 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [iconModalProjectId, setIconModalProjectId] = useState(null);
   
+  // Nuevo Estado: Modal de Instalación (PWA)
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  
   const [editingProjectNameId, setEditingProjectNameId] = useState(null);
   const [newProjectName, setNewProjectName] = useState('');
   
-  // Tutorial State (Dashboard)
   const [tutorialStep, setTutorialStep] = useState(0);
 
   const iconFileInputRef = useRef(null);
@@ -449,7 +448,6 @@ export default function App() {
     return <IconComponent className={`w-10 h-10 ${theme.text}`} />;
   };
 
-  // Dashboard Tutorial Steps
   const dashboardTutorialSteps = [
     { title: "¡Bienvenido a LalibreINV!", content: "Esta es tu herramienta de análisis cualitativo de código abierto. Este tutorial te mostrará cómo moverte por el Panel de Control (Dashboard).", pos: "top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" },
     { title: "Crear e Importar", content: "Arriba a la derecha encontrarás botones para crear un 'Nuevo Proyecto' desde cero, o 'Importar' un archivo JSON que te haya compartido un colega.", pos: "top-20 right-8" },
@@ -461,7 +459,104 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-50 font-sans relative selection:bg-blue-200">
         
-        {/* Overlay del Tutorial del Dashboard */}
+        {/* Modal de Tutorial de Instalación (Onboarding tipo App) */}
+        {isInstallModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
+             <div className="bg-white rounded-3xl shadow-2xl w-[850px] max-w-full overflow-hidden flex flex-col transform transition-all">
+                
+                {/* Banner Superior */}
+                <div className={`${theme.gradient} text-white p-8 text-center relative`}>
+                   <button onClick={() => setIsInstallModalOpen(false)} className="absolute top-4 right-4 bg-black/20 p-2 rounded-full hover:bg-black/40 transition-colors">
+                      <X className="w-5 h-5"/>
+                   </button>
+                   <MonitorDown className="w-14 h-14 mx-auto mb-4 text-white/90 drop-shadow-md" />
+                   <h2 className="text-3xl font-extrabold mb-2 tracking-tight">Instala LalibreINV en tu Computadora</h2>
+                   <p className="text-white/80 font-medium">No necesitas buscar en tiendas. Trabaja 100% offline siguiendo estos 3 pasos.</p>
+                </div>
+                
+                {/* Columnas de Instrucciones */}
+                <div className="grid md:grid-cols-2 gap-0 bg-white">
+                   
+                   {/* Columna Windows / Chrome */}
+                   <div className="p-8 border-b md:border-b-0 md:border-r border-gray-100">
+                      <div className="flex items-center gap-3 mb-6 bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
+                         <div className="bg-white p-2.5 rounded-xl shadow-sm text-blue-600">
+                            <MonitorDown className="w-6 h-6"/>
+                         </div>
+                         <div>
+                            <h3 className="font-bold text-gray-800 text-lg">Para Windows / Linux</h3>
+                            <p className="text-sm text-gray-500">Usando Google Chrome o Edge</p>
+                         </div>
+                      </div>
+                      <ul className="space-y-6">
+                         <li className="flex gap-4 items-start">
+                            <span className="w-7 h-7 shrink-0 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">1</span>
+                            <div>
+                               <h4 className="font-bold text-gray-800">Abre el navegador</h4>
+                               <p className="text-sm text-gray-500 mt-1">Asegúrate de haber abierto este enlace desde Google Chrome o Microsoft Edge.</p>
+                            </div>
+                         </li>
+                         <li className="flex gap-4 items-start">
+                            <span className="w-7 h-7 shrink-0 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">2</span>
+                            <div>
+                               <h4 className="font-bold text-gray-800">Toca "Instalar" en la barra</h4>
+                               <p className="text-sm text-gray-500 mt-1">En la barra de direcciones (arriba a la derecha, cerca de tus extensiones), busca un ícono de un <b>monitor con una flecha</b>.</p>
+                            </div>
+                         </li>
+                         <li className="flex gap-4 items-start">
+                            <span className="w-7 h-7 shrink-0 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">3</span>
+                            <div>
+                               <h4 className="font-bold text-gray-800">Confirmar Instalación</h4>
+                               <p className="text-sm text-gray-500 mt-1">Haz clic en "Instalar". ¡Listo! La app se abrirá en su propia ventana y aparecerá en tu escritorio.</p>
+                            </div>
+                         </li>
+                      </ul>
+                   </div>
+
+                   {/* Columna Mac / Safari */}
+                   <div className="p-8">
+                      <div className="flex items-center gap-3 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                         <div className="bg-white p-2.5 rounded-xl shadow-sm text-slate-700">
+                            <Apple className="w-6 h-6"/>
+                         </div>
+                         <div>
+                            <h3 className="font-bold text-gray-800 text-lg">Para Mac</h3>
+                            <p className="text-sm text-gray-500">Usando Safari (Nativo)</p>
+                         </div>
+                      </div>
+                      <ul className="space-y-6">
+                         <li className="flex gap-4 items-start">
+                            <span className="w-7 h-7 shrink-0 bg-slate-700 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">1</span>
+                            <div>
+                               <h4 className="font-bold text-gray-800">Abre el enlace en Safari</h4>
+                               <p className="text-sm text-gray-500 mt-1">Debes usar el navegador nativo Safari (la brújula). Si usas Chrome en Mac, sigue los pasos de Windows.</p>
+                            </div>
+                         </li>
+                         <li className="flex gap-4 items-start">
+                            <span className="w-7 h-7 shrink-0 bg-slate-700 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">2</span>
+                            <div>
+                               <h4 className="font-bold text-gray-800">Toca Compartir</h4>
+                               <p className="text-sm text-gray-500 mt-1">Haz clic en el ícono de compartir (un cuadrito con una flecha hacia arriba) en la barra superior.</p>
+                            </div>
+                         </li>
+                         <li className="flex gap-4 items-start">
+                            <span className="w-7 h-7 shrink-0 bg-slate-700 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">3</span>
+                            <div>
+                               <h4 className="font-bold text-gray-800">Agregar al Dock</h4>
+                               <p className="text-sm text-gray-500 mt-1">Desliza en el menú, selecciona "Agregar al Dock" y confirma. ¡La app aparecerá en tu Mac!</p>
+                            </div>
+                         </li>
+                      </ul>
+                   </div>
+                </div>
+                
+                <div className="bg-slate-800 text-slate-300 text-sm font-medium text-center py-4 border-t border-slate-700">
+                   Al instalarla, LalibreINV funcionará exactamente como un software descargable y sin internet.
+                </div>
+             </div>
+          </div>
+        )}
+
         {tutorialStep > 0 && tutorialStep <= dashboardTutorialSteps.length && (
           <TutorialPopup 
             step={tutorialStep} 
@@ -476,7 +571,6 @@ export default function App() {
           />
         )}
 
-        {/* Modal de Ajustes */}
         {isSettingsOpen && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
             <div className="bg-white rounded-2xl shadow-2xl p-6 w-[400px] max-w-full">
@@ -502,7 +596,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Modal Íconos */}
         {iconModalProjectId && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
             <div className="bg-white rounded-2xl shadow-2xl p-6 w-[450px] max-w-full">
@@ -551,6 +644,15 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-3">
+            {/* NUEVO BOTÓN: INSTALAR APP */}
+            <button 
+              onClick={() => setIsInstallModalOpen(true)} 
+              className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition-colors shadow-md mr-2" 
+              title="Instalar App en tu Computadora"
+            >
+              <MonitorDown className="w-5 h-5 text-green-400" /> Instalar App
+            </button>
+            
             <button onClick={() => setTutorialStep(1)} className="flex items-center gap-2 px-4 py-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl font-semibold transition-colors" title="Iniciar Tutorial">
               <HelpCircle className="w-5 h-5" /> Tutorial
             </button>
@@ -635,7 +737,6 @@ export default function App() {
     );
   }
 
-  // --- VISTA EDITOR ---
   const activeProject = projects.find(p => p.id === activeProjectId);
   return (
     <ProjectEditor 
