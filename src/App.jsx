@@ -5,7 +5,7 @@ import {
   ArrowLeft, LayoutGrid, FolderPlus, FolderOpen, Pencil, Clock, 
   Settings, ImagePlus, Briefcase, Book, PieChart, Target, Star, Heart,
   HelpCircle, ChevronRight, ChevronLeft, Sparkles, MonitorDown, Apple,
-  ShieldAlert, AlertTriangle, HardDrive
+  ShieldAlert, AlertTriangle, HardDrive, Github
 } from 'lucide-react';
 
 // --- PALETAS DE COLORES MODERNIZADAS (Con gradientes) ---
@@ -684,6 +684,19 @@ export default function App() {
                     <div>
                       <h4 className="text-lg font-bold text-green-700">La Solución: Exportar</h4>
                       <p className="text-gray-600 mt-1 leading-relaxed">Al terminar tu día de trabajo, usa el botón de <b>Exportar</b> (<Download className="w-4 h-4 inline text-gray-500"/>) en tus proyectos. Esto te permitirá guardar un archivo <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm text-gray-600 font-mono">.json</code> en tu PC o Google Drive para nunca perder nada.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 items-start border-t border-gray-100 pt-6 mt-2">
+                    <div className="bg-slate-800 p-3 rounded-xl text-white shrink-0 shadow-md">
+                      <Github className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-slate-800">Recomendación: Versión de Escritorio</h4>
+                      <p className="text-gray-600 mt-1 leading-relaxed">Para una experiencia 100% segura, con autoguardado en tus propias carpetas locales y mayor rendimiento, te recomendamos <b>descargar el instalador (.exe)</b> gratuito.</p>
+                      <a href="https://github.com/tu-usuario/lalibre-inv-web/releases" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-3 text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors">
+                        Descargar desde GitHub <ChevronRight className="w-4 h-4" />
+                      </a>
                     </div>
                   </div>
                 </div>

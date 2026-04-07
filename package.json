@@ -1,13 +1,31 @@
 {
   "name": "lalibre-inv",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && electron-builder",
     "lint": "eslint .",
     "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.lalibreinv.app",
+    "productName": "LalibreINV",
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "win": {
+      "icon": "public/LALIBRE.png"
+    },
+    "mac": {
+      "icon": "public/LALIBRE.png"
+    },
+    "directories": {
+      "output": "release"
+    }
   },
   "dependencies": {
     "lucide-react": "^1.7.0",
@@ -20,6 +38,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
+    "electron": "^41.1.1",
+    "electron-builder": "^26.8.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -27,6 +47,7 @@
     "postcss": "^8.5.8",
     "tailwindcss": "^3.4.19",
     "vite": "^8.0.4",
+    "vite-plugin-electron": "^0.29.1",
     "vite-plugin-pwa": "^1.2.0"
   }
 }
