@@ -366,6 +366,35 @@ export default function App() {
   // Nuevo Estado: Modal de Instalación (PWA)
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   
+  // NUEVO: Estado para capturar el evento de instalación nativo del navegador
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    // Escuchar si el navegador dice "¡Esta app se puede instalar!"
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault(); // Evita que Chrome muestre su propio mini-aviso automático
+      setDeferredPrompt(e); // Guardamos el evento para usarlo en nuestro propio botón
+    };
+    
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  // NUEVO: Función inteligente para el botón de instalar
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      // Si el navegador lo soporta, mostramos la ventana REAL de instalación
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null); // Ya se instaló, limpiamos el evento
+      }
+    } else {
+      // Si es Mac/Safari o ya está instalada, mostramos nuestro tutorial visual
+      setIsInstallModalOpen(true);
+    }
+  };
+  
   const [editingProjectNameId, setEditingProjectNameId] = useState(null);
   const [newProjectName, setNewProjectName] = useState('');
   
@@ -644,9 +673,9 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-3">
-            {/* NUEVO BOTÓN: INSTALAR APP */}
+            {/* NUEVO BOTÓN: INSTALAR APP CON LÓGICA NATIVA */}
             <button 
-              onClick={() => setIsInstallModalOpen(true)} 
+              onClick={handleInstallClick} 
               className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition-colors shadow-md mr-2" 
               title="Instalar App en tu Computadora"
             >
