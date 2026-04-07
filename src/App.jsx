@@ -4,7 +4,8 @@ import {
   X, Upload, FileSpreadsheet, FileJson, Edit2, Check, Search, Zap, 
   ArrowLeft, LayoutGrid, FolderPlus, FolderOpen, Pencil, Clock, 
   Settings, ImagePlus, Briefcase, Book, PieChart, Target, Star, Heart,
-  HelpCircle, ChevronRight, ChevronLeft, Sparkles, MonitorDown, Apple
+  HelpCircle, ChevronRight, ChevronLeft, Sparkles, MonitorDown, Apple,
+  ShieldAlert, AlertTriangle, HardDrive
 } from 'lucide-react';
 
 // --- PALETAS DE COLORES MODERNIZADAS (Con gradientes) ---
@@ -359,6 +360,9 @@ export default function App() {
   const [view, setView] = useState('dashboard');
   const [activeProjectId, setActiveProjectId] = useState(null);
   
+  // NUEVO: Detectar si estamos en Electron (Escritorio .exe) o en Navegador (Web/PWA)
+  const isElectron = typeof window !== 'undefined' && window.navigator && /electron/i.test(window.navigator.userAgent.toLowerCase());
+  
   // NUEVO: Autoguardado del Tema en localStorage
   const [activeThemeName, setActiveThemeName] = useState(() => {
     return localStorage.getItem('lalibreinv_theme') || 'blue';
@@ -368,6 +372,16 @@ export default function App() {
   const [iconModalProjectId, setIconModalProjectId] = useState(null);
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  // NUEVO: Estado para la advertencia de guardado de datos
+  const [isDataWarningOpen, setIsDataWarningOpen] = useState(() => {
+    return !localStorage.getItem('lalibreinv_data_warning_seen');
+  });
+
+  const handleCloseDataWarning = () => {
+    localStorage.setItem('lalibreinv_data_warning_seen', 'true');
+    setIsDataWarningOpen(false);
+  };
 
   // NUEVO: Autoguardado de Proyectos en localStorage
   const [projects, setProjects] = useState(() => {
@@ -402,15 +416,19 @@ export default function App() {
   }, [activeThemeName]);
 
   useEffect(() => {
+    if (isElectron) return; // No escuchar eventos de PWA en la versión .exe
+
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault(); 
       setDeferredPrompt(e); 
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, []);
+  }, [isElectron]);
 
   const handleInstallClick = async () => {
+    if (isElectron) return; // Por seguridad
+
     if (deferredPrompt) {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
@@ -462,7 +480,28 @@ export default function App() {
     e.target.value = null;
   };
 
-  const handleExportProject = (project) => {
+  const handleExportProject = async (project) => {
+    try {
+      // 1. Intentar usar la API moderna de acceso a archivos (Nativo en Chrome/Edge/Escritorio)
+      if (window.showSaveFilePicker) {
+        const fileHandle = await window.showSaveFilePicker({
+          suggestedName: `${project.name.replace(/\s+/g, '_')}.json`,
+          types: [{
+            description: 'Archivo de Proyecto LalibreINV',
+            accept: { 'application/json': ['.json'] },
+          }],
+        });
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(project, null, 2));
+        await writable.close();
+        return; // El usuario eligió dónde guardar y se guardó exitosamente
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') return; // El usuario cerró la ventana de guardar
+      console.error("Error al usar guardado nativo:", error);
+    }
+
+    // 2. Método de respaldo (Descarga clásica si usan Safari viejo o Firefox)
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(project, null, 2));
     const link = document.createElement('a'); link.setAttribute("href", dataStr); link.setAttribute("download", `${project.name.replace(/\s+/g, '_')}.json`);
     document.body.appendChild(link); link.click(); link.remove();
@@ -600,6 +639,64 @@ export default function App() {
           </div>
         )}
 
+        {/* NUEVO: Modal de Advertencia de Datos (Onboarding de Privacidad) */}
+        {isDataWarningOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-[600px] max-w-full overflow-hidden flex flex-col transform transition-all">
+              <div className="bg-amber-500 text-white p-6 flex items-center gap-4 relative">
+                <button onClick={handleCloseDataWarning} className="absolute top-4 right-4 bg-black/10 p-2 rounded-full hover:bg-black/20 transition-colors">
+                  <X className="w-5 h-5"/>
+                </button>
+                <div className="bg-white/20 p-3 rounded-2xl">
+                  <AlertTriangle className="w-10 h-10 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-extrabold tracking-tight">¡Atención con tus Datos!</h2>
+                  <p className="text-amber-50 font-medium">Cómo funciona el guardado en la versión web</p>
+                </div>
+              </div>
+              <div className="p-8">
+                <div className="space-y-6">
+                  <div className="flex gap-4 items-start">
+                    <div className="bg-blue-100 p-3 rounded-xl text-blue-600 shrink-0">
+                      <LayoutGrid className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-800">Autoguardado en el Navegador (Local)</h4>
+                      <p className="text-gray-600 mt-1 leading-relaxed">Tus proyectos se guardan automáticamente en la <b>memoria interna de este navegador</b>. Esto significa que tu investigación está segura, es privada, y no viaja a internet.</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-4 items-start">
+                    <div className="bg-red-100 p-3 rounded-xl text-red-600 shrink-0">
+                      <ShieldAlert className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-red-700">El Peligro de Pérdida</h4>
+                      <p className="text-gray-600 mt-1 leading-relaxed">Si limpias el caché/historial de tu navegador, usas el "Modo Incógnito", o cambias de computadora, <b>perderás todos tus proyectos permanentemente</b>.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 items-start">
+                    <div className="bg-green-100 p-3 rounded-xl text-green-600 shrink-0">
+                      <HardDrive className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-green-700">La Solución: Exportar</h4>
+                      <p className="text-gray-600 mt-1 leading-relaxed">Al terminar tu día de trabajo, usa el botón de <b>Exportar</b> (<Download className="w-4 h-4 inline text-gray-500"/>) en tus proyectos. Esto te permitirá guardar un archivo <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm text-gray-600 font-mono">.json</code> en tu PC o Google Drive para nunca perder nada.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-end">
+                <button onClick={handleCloseDataWarning} className="bg-amber-500 hover:bg-amber-600 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-md">
+                  Entendido, mantendré mis datos seguros
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {tutorialStep > 0 && tutorialStep <= dashboardTutorialSteps.length && (
           <TutorialPopup 
             step={tutorialStep} 
@@ -687,13 +784,25 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-3">
+            {/* NUEVO BOTÓN: Advertencia de Datos Permanente */}
             <button 
-              onClick={handleInstallClick} 
-              className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition-colors shadow-md mr-2" 
-              title="Instalar App en tu Computadora"
+              onClick={() => setIsDataWarningOpen(true)} 
+              className="p-2.5 text-amber-500 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors border border-amber-200 shadow-sm" 
+              title="Información importante sobre Guardado"
             >
-              <MonitorDown className="w-5 h-5 text-green-400" /> Instalar App
+              <ShieldAlert className="w-5 h-5" />
             </button>
+
+            {/* Mostrar botón de instalar SOLO si NO estamos en la versión .exe */}
+            {!isElectron && (
+              <button 
+                onClick={handleInstallClick} 
+                className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition-colors shadow-md mr-2" 
+                title="Instalar App en tu Computadora"
+              >
+                <MonitorDown className="w-5 h-5 text-green-400" /> Instalar App
+              </button>
+            )}
             
             <button onClick={() => setTutorialStep(1)} className="flex items-center gap-2 px-4 py-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl font-semibold transition-colors" title="Iniciar Tutorial">
               <HelpCircle className="w-5 h-5" /> Tutorial
