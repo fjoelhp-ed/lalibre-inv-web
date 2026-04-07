@@ -539,9 +539,11 @@ export default function App() {
         {/* HEADER DASHBOARD */}
         <header className="bg-white/80 backdrop-blur-lg border-b border-gray-200/80 shadow-sm px-8 py-5 flex justify-between items-center sticky top-0 z-20">
           <div className="flex items-center gap-4">
-            <div className={`${theme.gradient} p-3 rounded-xl shadow-lg transform transition-transform hover:scale-105`}>
-              <LayoutGrid className="w-6 h-6 text-white" />
-            </div>
+            <img 
+              src="/LALIBRE.png" 
+              alt="Logo LalibreINV" 
+              className="w-14 h-14 object-contain drop-shadow-md transform transition-transform hover:scale-105" 
+            />
             <div>
               <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">LalibreINV <span className="text-gray-400 font-medium">Workspace</span></h1>
               <p className="text-sm font-medium text-gray-500">Gestor Avanzado de Investigación</p>
