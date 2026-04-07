@@ -5,7 +5,7 @@ import {
   ArrowLeft, LayoutGrid, FolderPlus, FolderOpen, Pencil, Clock, 
   Settings, ImagePlus, Briefcase, Book, PieChart, Target, Star, Heart,
   HelpCircle, ChevronRight, ChevronLeft, Sparkles, MonitorDown, Apple,
-  ShieldAlert, AlertTriangle, HardDrive, Github
+  ShieldAlert, AlertTriangle, HardDrive
 } from 'lucide-react';
 
 // --- PALETAS DE COLORES MODERNIZADAS (Con gradientes) ---
@@ -689,7 +689,11 @@ export default function App() {
 
                   <div className="flex gap-4 items-start border-t border-gray-100 pt-6 mt-2">
                     <div className="bg-slate-800 p-3 rounded-xl text-white shrink-0 shadow-md">
-                      <Github className="w-6 h-6" />
+                      {/* Ícono SVG nativo de GitHub (reemplazando la dependencia eliminada) */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+                        <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.02c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+                        <path d="M8 20c-5 1.5-5-2.5-7-3"></path>
+                      </svg>
                     </div>
                     <div>
                       <h4 className="text-lg font-bold text-slate-800">Recomendación: Versión de Escritorio</h4>
