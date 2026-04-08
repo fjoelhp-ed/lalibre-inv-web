@@ -7,7 +7,7 @@ import {
   HelpCircle, ChevronRight, ChevronLeft, Sparkles, MonitorDown, Apple,
   ShieldAlert, AlertTriangle, HardDrive, Library, ExternalLink, Highlighter,
   Video, Image as ImageIcon, AudioLines, Network, Cloud, BookOpen, FolderTree,
-  Info, FileDown, GripVertical, Table2, MousePointerClick, Folder, Link as LinkIcon, Copy, FilePlus
+  Info, FileDown, GripVertical, Table2, MousePointerClick, Folder, Link as LinkIcon, Copy, FilePlus, Quote as QuoteIcon
 } from 'lucide-react';
 
 const ipc = window.require ? window.require('electron').ipcRenderer : null;
@@ -21,7 +21,7 @@ const THEMES = {
 const PRESET_ICONS = { FolderOpen, Briefcase, Book, FileText, PieChart, Target, Star, Heart };
 const CODE_COLORS = ['bg-red-100 text-red-800 border-red-200', 'bg-blue-100 text-blue-800 border-blue-200', 'bg-green-100 text-green-800 border-green-200', 'bg-yellow-100 text-yellow-800 border-yellow-200', 'bg-purple-100 text-purple-800 border-purple-200', 'bg-pink-100 text-pink-800 border-pink-200', 'bg-indigo-100 text-indigo-800 border-indigo-200', 'bg-teal-100 text-teal-800 border-teal-200'];
 
-const defaultDocuments = [{ id: 1, title: "Entrevista_01.txt", content: "Entrevistador: ¿Cómo describirías tu experiencia trabajando desde casa?\n\nEntrevistado: Fue un alivio, pero luego empecé a sentirme aislado. La línea entre mi vida personal y el trabajo desapareció por completo." }];
+const defaultDocuments = [{ id: "1", title: "Entrevista_01.txt", content: "Entrevistador: ¿Cómo describirías tu experiencia trabajando desde casa?\n\nEntrevistado: Fue un alivio, pero luego empecé a sentirme aislado. La línea entre mi vida personal y el trabajo desapareció por completo." }];
 const defaultCodes = [{ id: 1, name: 'Aislamiento', color: CODE_COLORS[0] }, { id: 2, name: 'Límites trabajo-vida', color: CODE_COLORS[1] }];
 
 class ErrorBoundary extends React.Component {
@@ -57,7 +57,6 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
   const [codes, setCodes] = useState(() => Array.isArray(project.codes) ? project.codes : []);
   const [quotes, setQuotes] = useState(() => Array.isArray(project.quotes) ? project.quotes : []);
   
-  // NUEVOS ESTADOS DE REFERENCIAS (Estilo Zotero)
   const [references, setReferences] = useState(() => Array.isArray(project.references) ? project.references : []);
   const [referenceGroups, setReferenceGroups] = useState(() => Array.isArray(project.referenceGroups) ? project.referenceGroups : [{id: 'mt', name: 'Marco Teórico'}, {id: 'mm', name: 'Marco Metodológico'}]);
   const [activeRefGroupId, setActiveRefGroupId] = useState('all');
@@ -66,7 +65,7 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
   const [newGroupName, setNewGroupName] = useState('');
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
 
-  const [activeDocId, setActiveDocId] = useState(documents[0]?.id || null);
+  const [activeDocId, setActiveDocId] = useState(documents[0]?.id ? String(documents[0].id) : null);
   const [activeFile, setActiveFile] = useState(null);
   const [selectedText, setSelectedText] = useState('');
   
@@ -92,6 +91,7 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
     }
   }, [documents, codes, quotes, libraryFiles, references, referenceGroups]);
 
+  // LÓGICA DE PANELES AJUSTABLES
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (isResizingLeft) setLeftWidth(Math.max(200, Math.min(e.clientX - 80, 600))); 
@@ -131,8 +131,8 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
   const handleCodeClick = (code) => {
     const textToCode = pdfQuoteCatcher.trim() || selectedText;
     if (textToCode) {
-      const sourceName = activeTab === 'biblioteca' && activeFile ? activeFile.name : (documents.find(d => d.id === activeDocId)?.title || 'Documento Texto');
-      const newQuote = { id: Date.now(), docId: activeTab === 'textos' ? activeDocId : (activeFile ? activeFile.id : 'desconocido'), text: textToCode, codeId: code.id, sourceName: sourceName, timestamp: new Date().toLocaleTimeString(), memo: '' };
+      const sourceName = activeTab === 'biblioteca' && activeFile ? activeFile.name : (documents.find(d => String(d.id) === String(activeDocId))?.title || 'Documento Texto');
+      const newQuote = { id: Date.now().toString(), docId: activeTab === 'textos' ? activeDocId : (activeFile ? activeFile.id : 'desconocido'), text: textToCode, codeId: code.id, sourceName: sourceName, timestamp: new Date().toLocaleTimeString(), memo: '' };
       setQuotes([newQuote, ...quotes]);
       setSelectedText('');
       setPdfQuoteCatcher('');
@@ -144,26 +144,58 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
     if(window.confirm("¿Eliminar esta cita de tus resultados?")) setQuotes(quotes.filter(q => q.id !== id));
   };
 
+  const updateQuoteMemo = (id, newMemo) => {
+    setQuotes(quotes.map(q => q.id === id ? { ...q, memo: newMemo } : q));
+  };
+
+  // --- IMPORTACIÓN DE TXT (Mejorada) ---
   const handleImportTXT = (e) => {
     const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = (event) => {
-        const newDoc = { id: Date.now() + Math.random(), title: file.name, content: event.target.result };
-        setDocuments(prev => [...prev, newDoc]);
-        setActiveDocId(newDoc.id);
+        const newId = Date.now().toString() + Math.random().toString(36).substring(2, 6);
+        const newDoc = { id: newId, title: file.name, content: event.target.result };
+        
+        setDocuments(prev => {
+          const updated = [...prev, newDoc];
+          setActiveDocId(newId);
+          return updated;
+        });
       };
+      reader.onerror = () => alert(`❌ Error al leer el archivo de texto: ${file.name}`);
       reader.readAsText(file);
     });
+    
     e.target.value = null;
   };
 
+  // --- IMPORTACIÓN DE MULTIMEDIA Y PDF ---
   const handleImportMultimedia = async () => {
-    if (!ipc) return alert("La importación multimedia local solo está disponible en la versión de Escritorio.");
+    if (!ipc) return alert("La importación multimedia local solo está disponible en la versión de Escritorio instalable (.exe).");
     if (!project.rootPath) return alert("Este proyecto no tiene una carpeta raíz asignada.");
-    const result = await ipc.invoke('import-file-to-lib', { rootPath: project.rootPath });
-    if (result) {
-      setLibraryFiles([...libraryFiles, { id: Date.now(), name: result.fileName, path: result.fullPath, type: result.type, folder: result.targetFolder, addedAt: new Date().toISOString() }]);
+    
+    try {
+      const result = await ipc.invoke('import-file-to-lib', { rootPath: project.rootPath });
+      
+      if (result) {
+        const newFile = { 
+          id: Date.now().toString(), 
+          name: result.fileName, 
+          path: result.fullPath, 
+          type: result.type, 
+          folder: result.targetFolder, 
+          addedAt: new Date().toISOString() 
+        };
+        
+        setLibraryFiles(prev => [...prev, newFile]);
+        setActiveFile(newFile);
+      }
+    } catch (error) {
+      console.error(error);
+      alert(`❌ Error al importar el archivo.\n\nAsegúrate de que el archivo no esté abierto en otro programa.`);
     }
   };
 
@@ -239,10 +271,6 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
     return { nodes, links };
   }, [codes, quotes]);
 
-  // ============================================================================
-  // LÓGICA DEL GESTOR DE REFERENCIAS ESTILO ZOTERO
-  // ============================================================================
-  
   const handleAddRefGroup = (e) => {
     e.preventDefault();
     if (newGroupName.trim()) {
@@ -254,10 +282,10 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
 
   const handleCreateReference = () => {
     const newRef = {
-      id: Date.now(),
+      id: Date.now().toString(),
       groupId: activeRefGroupId === 'all' ? null : activeRefGroupId,
       linkedFileId: null,
-      type: 'Artículo',
+      type: 'Artículo de Revista',
       title: 'Nueva Referencia',
       authors: [{ firstName: '', lastName: '' }],
       year: '', journal: '', volume: '', issue: '', pages: '', publisher: '', doi: '', url: ''
@@ -266,10 +294,8 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
     setActiveRefId(newRef.id);
   };
 
-  const updateActiveRef = (field, value) => {
-    setReferences(refs => refs.map(r => r.id === activeRefId ? { ...r, [field]: value } : r));
-  };
-
+  const updateActiveRef = (field, value) => setReferences(refs => refs.map(r => r.id === activeRefId ? { ...r, [field]: value } : r));
+  
   const updateActiveRefAuthor = (index, field, value) => {
     setReferences(refs => refs.map(r => {
       if (r.id === activeRefId) {
@@ -281,20 +307,8 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
     }));
   };
 
-  const addAuthorToActiveRef = () => {
-    setReferences(refs => refs.map(r => r.id === activeRefId ? { ...r, authors: [...r.authors, { firstName: '', lastName: '' }] } : r));
-  };
-
-  const removeAuthorFromActiveRef = (index) => {
-    setReferences(refs => refs.map(r => {
-      if (r.id === activeRefId) {
-        const newAuthors = [...r.authors];
-        newAuthors.splice(index, 1);
-        return { ...r, authors: newAuthors };
-      }
-      return r;
-    }));
-  };
+  const addAuthorToActiveRef = () => setReferences(refs => refs.map(r => r.id === activeRefId ? { ...r, authors: [...r.authors, { firstName: '', lastName: '' }] } : r));
+  const removeAuthorFromActiveRef = (index) => setReferences(refs => refs.map(r => { if (r.id === activeRefId) { const newAuthors = [...r.authors]; newAuthors.splice(index, 1); return { ...r, authors: newAuthors }; } return r; }));
 
   const deleteReference = (id) => {
     if (window.confirm("¿Eliminar esta referencia?")) {
@@ -303,42 +317,33 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
     }
   };
 
-  // Generador inteligente de citas
   const generateCitationText = (ref, style) => {
     if (!ref || !ref.title) return "Referencia incompleta.";
-    
-    // Formatear Autores
     let authorsText = "";
     const validAuthors = ref.authors.filter(a => a.lastName);
-    
     if (validAuthors.length === 0) authorsText = "Sin Autor.";
-    else if (style === 'APA7' || style === 'APA6') {
-      authorsText = validAuthors.map(a => `${a.lastName}, ${a.firstName ? a.firstName.charAt(0) + '.' : ''}`).join(' & ');
-    } else if (style === 'MLA') {
+    else if (style === 'APA7' || style === 'APA6') authorsText = validAuthors.map(a => `${a.lastName}, ${a.firstName ? a.firstName.charAt(0) + '.' : ''}`).join(' & ');
+    else if (style === 'MLA') {
       if (validAuthors.length === 1) authorsText = `${validAuthors[0].lastName}, ${validAuthors[0].firstName}.`;
       else if (validAuthors.length === 2) authorsText = `${validAuthors[0].lastName}, ${validAuthors[0].firstName}, and ${validAuthors[1].firstName} ${validAuthors[1].lastName}.`;
       else authorsText = `${validAuthors[0].lastName}, ${validAuthors[0].firstName}, et al.`;
-    } else if (style === 'Chicago') {
-      authorsText = validAuthors.map(a => `${a.lastName}, ${a.firstName}`).join(', ');
-    }
+    } else if (style === 'Chicago') authorsText = validAuthors.map(a => `${a.lastName}, ${a.firstName}`).join(', ');
 
     const year = ref.year ? `(${ref.year})` : '(s.f.)';
     const title = ref.title;
     
     if (style === 'APA7' || style === 'APA6') {
-      if (ref.type === 'Libro') return `${authorsText} ${year}. *${title}*. ${ref.publisher || ''}.`;
-      if (ref.type === 'Artículo') return `${authorsText} ${year}. ${title}. *${ref.journal || ''}*, ${ref.volume || ''}${ref.issue ? `(${ref.issue})` : ''}, ${ref.pages || ''}. ${ref.doi || ref.url || ''}`;
-      if (ref.type === 'Web') return `${authorsText} ${year}. ${title}. Recuperado de ${ref.url}`;
+      if (ref.type === 'Libro' || ref.type === 'Tesis') return `${authorsText} ${year}. *${title}*. ${ref.publisher || ''}.`;
+      if (ref.type === 'Artículo de Revista') return `${authorsText} ${year}. ${title}. *${ref.journal || ''}*, ${ref.volume || ''}${ref.issue ? `(${ref.issue})` : ''}, ${ref.pages || ''}. ${ref.doi || ref.url || ''}`;
+      if (ref.type === 'Página Web') return `${authorsText} ${year}. ${title}. Recuperado de ${ref.url}`;
       return `${authorsText} ${year}. ${title}.`;
     } 
-    
     if (style === 'MLA') {
       if (ref.type === 'Libro') return `${authorsText} *${title}*. ${ref.publisher || ''}, ${ref.year || ''}.`;
-      if (ref.type === 'Artículo') return `${authorsText} "${title}." *${ref.journal || ''}* ${ref.volume || ''}.${ref.issue || ''} (${ref.year || ''}): ${ref.pages || ''}.`;
+      if (ref.type === 'Artículo de Revista') return `${authorsText} "${title}." *${ref.journal || ''}* ${ref.volume || ''}.${ref.issue || ''} (${ref.year || ''}): ${ref.pages || ''}.`;
       return `${authorsText} "${title}."`;
     }
-
-    return `${authorsText}. ${title}. ${year}.`; // Fallback genérico
+    return `${authorsText}. ${title}. ${year}.`;
   };
 
   const activeRef = references.find(r => r.id === activeRefId);
@@ -370,7 +375,7 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
         <button onClick={() => setActiveTab('referencias')} className={`p-4 rounded-2xl transition-all ${activeTab === 'referencias' ? `${theme.bg} text-white shadow-lg` : 'text-slate-500 hover:bg-slate-800'}`} title="Gestor de Referencias"><BookOpen className="w-6 h-6" /></button>
       </div>
 
-      {/* PANELES DE TEXTOS Y BIBLIOTECA (Se mantienen igual) */}
+      {/* PANEL IZQUIERDO: CÓDIGOS (Con Resizer) */}
       {(activeTab === 'textos' || activeTab === 'biblioteca') && (
         <div style={{ width: leftWidth }} className="bg-white border-r border-gray-200 flex flex-col z-10 shrink-0 relative">
           <div className={`p-5 ${theme.gradient} text-white flex justify-between items-center`}>
@@ -410,29 +415,48 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
 
       {/* ÁREA CENTRAL TEXTOS Y BIBLIOTECA */}
       {activeTab === 'textos' && (
-        <div className="flex-1 flex flex-col bg-slate-50/50 min-w-0 z-0">
-            <div className="p-4 bg-white border-b border-gray-200 flex justify-between items-center shadow-sm">
-              <h3 className="font-bold text-gray-800 flex items-center gap-2"><FileText className={theme.text} /> Editor de Textos</h3>
-              <div className="flex items-center gap-3">
-                <select value={activeDocId || ''} onChange={(e) => setActiveDocId(Number(e.target.value))} className="text-sm font-bold text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none max-w-[250px] truncate">
-                  {documents.length === 0 && <option>Sin documentos</option>}
-                  {documents.map(doc => <option key={doc.id} value={doc.id}>{doc.title}</option>)}
-                </select>
+        <div className="flex-1 flex overflow-hidden bg-slate-50/50 z-0">
+            
+            {/* NUEVO PANEL: Lista de Documentos TXT */}
+            <div className="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center shadow-sm">
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Mis Textos</h3>
                 <input type="file" multiple accept=".txt" ref={txtInputRef} onChange={handleImportTXT} className="hidden" />
-                <button onClick={() => txtInputRef.current.click()} className="text-xs font-bold bg-slate-800 text-white px-3 py-2 rounded-lg hover:bg-slate-700 transition-colors flex items-center gap-1 shadow-sm">
-                  <Upload className="w-3.5 h-3.5" /> Añadir .TXT
+                <button onClick={() => txtInputRef.current.click()} className="bg-blue-50 text-blue-600 hover:bg-blue-100 p-1.5 rounded-lg transition-colors" title="Importar .TXT">
+                  <Plus className="w-4 h-4" />
                 </button>
               </div>
-            </div>
-            <div className="flex-1 p-8 overflow-y-auto select-text">
-              <div onMouseUp={() => {
-                const sel = window.getSelection();
-                if(sel && sel.toString().trim().length > 0) setSelectedText(sel.toString().trim());
-                else setSelectedText('');
-              }} className="max-w-4xl mx-auto bg-white p-12 rounded-2xl shadow-xl border border-gray-100 min-h-[70vh] text-lg leading-loose font-serif whitespace-pre-wrap">
-                {documents.find(d => d.id === activeDocId)?.content || <div className="text-center text-gray-400 mt-10">Agrega un archivo .TXT para comenzar.</div>}
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {documents.length === 0 && <p className="text-[10px] text-center text-slate-400 mt-4">Aún no hay textos. Importa uno arriba.</p>}
+                {documents.map(doc => (
+                  <div key={doc.id} onClick={() => setActiveDocId(String(doc.id))} className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center gap-3 ${String(activeDocId) === String(doc.id) ? `${theme.lightBg} ${theme.border} shadow-sm` : 'border-transparent hover:bg-slate-50'}`}>
+                    <div className={`${String(activeDocId) === String(doc.id) ? theme.text : 'text-slate-400'}`}>
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <span className={`text-xs font-bold truncate ${String(activeDocId) === String(doc.id) ? 'text-slate-800' : 'text-slate-600'}`}>{doc.title}</span>
+                  </div>
+                ))}
               </div>
             </div>
+
+            {/* VISOR DE TEXTO CENTRAL */}
+            <div className="flex-1 flex flex-col relative overflow-hidden">
+              <div className="p-4 bg-white border-b border-gray-200 shadow-sm flex items-center">
+                <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                  {documents.find(d => String(d.id) === String(activeDocId))?.title || 'Editor de Análisis'}
+                </h3>
+              </div>
+              <div className="flex-1 p-8 overflow-y-auto select-text">
+                <div onMouseUp={() => {
+                  const sel = window.getSelection();
+                  if(sel && sel.toString().trim().length > 0) setSelectedText(sel.toString().trim());
+                  else setSelectedText('');
+                }} className="max-w-4xl mx-auto bg-white p-12 rounded-2xl shadow-xl border border-gray-100 min-h-[70vh] text-lg leading-loose font-serif whitespace-pre-wrap">
+                  {documents.find(d => String(d.id) === String(activeDocId))?.content || <div className="text-center text-gray-400 mt-10">Selecciona o añade un archivo .TXT en el panel izquierdo para comenzar.</div>}
+                </div>
+              </div>
+            </div>
+
         </div>
       )}
 
@@ -455,25 +479,34 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
                       <div className="flex items-center gap-2"><div className="text-red-500"><FileText className="w-4 h-4" /></div><span className="text-xs font-bold text-gray-700 truncate">{file.name}</span></div>
                     </div>
                   ))}
+                  {libraryFiles.filter(f => f.folder === 'Documentos').length === 0 && <p className="text-[10px] text-slate-400">Vacío</p>}
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Multimedia</h4>
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Imágenes / Videos</h4>
                   {libraryFiles.filter(f => f.folder === 'Multimedia').map(file => (
                     <div key={file.id} onClick={() => setActiveFile(file)} className={`p-2.5 rounded-lg border mb-2 cursor-pointer transition-all ${activeFile?.id === file.id ? `${theme.lightBg} ${theme.border} shadow-sm` : 'border-transparent hover:bg-gray-50'}`}>
-                      <div className="flex items-center gap-2"><div className="text-purple-500">{file.type === 'video' ? <Video className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}</div><span className="text-xs font-bold text-gray-700 truncate">{file.name}</span></div>
+                      <div className="flex items-center gap-2"><div className="text-purple-500">{file.type === 'video' ? <Video className="w-4 h-4" /> : file.type === 'audio' ? <AudioLines className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}</div><span className="text-xs font-bold text-gray-700 truncate">{file.name}</span></div>
                     </div>
                   ))}
+                  {libraryFiles.filter(f => f.folder === 'Multimedia').length === 0 && <p className="text-[10px] text-slate-400">Vacío</p>}
                 </div>
               </div>
 
               <div className="flex-1 bg-slate-200 flex flex-col relative overflow-hidden">
                 <div className="flex-1 flex flex-col overflow-hidden">{renderFileViewer()}</div>
-                {activeFile && (activeFile.type === 'pdf' || activeFile.type === 'image') && (
+                
+                {/* SOLUCIÓN PRO: Capturador Manual para PDFs y Transcripción Multimedia */}
+                {activeFile && (
                   <div className="h-32 bg-white border-t border-gray-300 shadow-[0_-4px_15px_rgba(0,0,0,0.05)] flex flex-col shrink-0 p-3 select-text z-10">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs font-bold text-slate-500 flex items-center gap-1"><MousePointerClick className="w-3.5 h-3.5" /> Capturador de Citas (Pega aquí texto del PDF)</span>
+                      <span className="text-xs font-bold text-slate-500 flex items-center gap-1"><MousePointerClick className="w-3.5 h-3.5" /> Capturador de Citas / Transcripción</span>
                     </div>
-                    <textarea value={pdfQuoteCatcher} onChange={(e) => setPdfQuoteCatcher(e.target.value)} className="flex-1 w-full border border-blue-100 bg-blue-50/30 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none shadow-inner" placeholder="Copia un texto del PDF y pégalo aquí (Ctrl+C y Ctrl+V). Luego selecciona un Código a la izquierda..." />
+                    <textarea 
+                      value={pdfQuoteCatcher} 
+                      onChange={(e) => setPdfQuoteCatcher(e.target.value)} 
+                      className="flex-1 w-full border border-blue-100 bg-blue-50/30 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none shadow-inner" 
+                      placeholder={activeFile.type === 'audio' || activeFile.type === 'video' ? "Transcribe el audio o video aquí... Luego selecciona un Código a la izquierda para guardar." : "Copia un texto del documento y pégalo aquí (Ctrl+C y Ctrl+V). Luego selecciona un Código a la izquierda..."} 
+                    />
                   </div>
                 )}
               </div>
@@ -517,7 +550,7 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
         </div>
       )}
 
-      {/* PESTAÑA REFERENCIAS (ESTILO ZOTERO - 3 PANELES) */}
+      {/* PESTAÑA REFERENCIAS (ESTILO ZOTERO) */}
       {activeTab === 'referencias' && (
         <div className="flex-1 flex flex-col overflow-hidden bg-white select-text">
           <div className="p-4 border-b border-gray-200 shadow-sm flex items-center justify-between">
@@ -528,8 +561,6 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
           </div>
           
           <div className="flex-1 flex overflow-hidden">
-            
-            {/* Panel Izquierdo: Colecciones / Carpetas */}
             <div className="w-60 bg-slate-50 border-r border-gray-200 flex flex-col shrink-0">
               <div className="p-4 border-b border-gray-200">
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Colecciones</h4>
@@ -557,7 +588,6 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
               </div>
             </div>
 
-            {/* Panel Central: Lista de Referencias */}
             <div className="flex-1 border-r border-gray-200 flex flex-col bg-white">
               <div className="grid grid-cols-12 gap-4 p-3 bg-slate-100 border-b border-gray-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
                 <div className="col-span-6">Título</div>
@@ -582,7 +612,6 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
               </div>
             </div>
 
-            {/* Panel Derecho: Detalles y Edición (Zotero Style) */}
             <div className="w-[400px] bg-slate-50 flex flex-col shrink-0 overflow-y-auto">
               {!activeRef ? (
                 <div className="flex items-center justify-center h-full text-slate-400 p-8 text-center"><p>Selecciona una referencia para ver y editar sus metadatos.</p></div>
@@ -593,7 +622,6 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
                     <button onClick={() => deleteReference(activeRef.id)} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded"><Trash2 className="w-4 h-4" /></button>
                   </div>
 
-                  {/* Vinculación de Archivo y Colección */}
                   <div className="space-y-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                     <div>
                       <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1 mb-1"><LinkIcon className="w-3 h-3"/> Archivo Vinculado (PDF/Media)</label>
@@ -612,7 +640,6 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
                     </div>
                   </div>
 
-                  {/* Formulario de Metadatos */}
                   <div className="space-y-3">
                     <div>
                       <label className="text-[10px] font-bold text-slate-500 uppercase">Tipo de Elemento</label>
@@ -626,7 +653,6 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
                       <textarea value={activeRef.title} onChange={e => updateActiveRef('title', e.target.value)} className="w-full text-sm p-2 border border-gray-300 rounded bg-white focus:border-blue-500 focus:outline-none resize-none min-h-[60px]" placeholder="Título completo..." />
                     </div>
 
-                    {/* Autores por celdas */}
                     <div>
                       <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Autores / Creadores</label>
                       <div className="space-y-2">
@@ -656,7 +682,6 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
                     <div><label className="text-[10px] font-bold text-slate-500 uppercase">URL / DOI</label><input value={activeRef.url || activeRef.doi || ''} onChange={e => {updateActiveRef('url', e.target.value); updateActiveRef('doi', e.target.value)}} className="w-full text-sm p-1.5 border border-gray-300 rounded bg-white focus:outline-none text-blue-600" /></div>
                   </div>
 
-                  {/* Generador de Citas Visual */}
                   <div className="mt-8 bg-blue-50 border border-blue-200 rounded-xl overflow-hidden">
                     <div className="bg-blue-100 px-3 py-2 flex justify-between items-center border-b border-blue-200">
                       <span className="text-xs font-bold text-blue-800">Generar Cita</span>
@@ -680,7 +705,7 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
         </div>
       )}
 
-      {/* PANEL DERECHO: RESULTADOS Y MEMOS (Para textos y biblioteca multimedia) */}
+      {/* PANEL DERECHO: RESULTADOS Y MEMOS */}
       {(activeTab === 'textos' || activeTab === 'biblioteca') && (
         <div style={{ width: rightWidth }} className="bg-white border-l border-gray-200 flex flex-col z-20 shrink-0 relative">
           <div onMouseDown={() => setIsResizingRight(true)} className="absolute top-0 left-0 w-2 h-full cursor-col-resize hover:bg-blue-500/20 flex items-center justify-center group z-50">
@@ -688,7 +713,7 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
           </div>
           
           <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center pl-6">
-            <h2 className="font-bold text-gray-700 flex items-center gap-2"><Quote className="w-4 h-4" /> Resultados</h2>
+            <h2 className="font-bold text-gray-700 flex items-center gap-2"><QuoteIcon className="w-4 h-4" /> Resultados</h2>
             <button onClick={handleExportReport} className="bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-700 transition-colors shadow-sm">
               <FileDown className="w-3.5 h-3.5" /> Reporte
             </button>
@@ -727,14 +752,19 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
   );
 }
 
-// ============================================================================
-// APP MAIN (Dashboard)
-// ============================================================================
 export default function App() {
   const [view, setView] = useState('dashboard');
   const [activeProjectId, setActiveProjectId] = useState(null);
   const [activeThemeName, setActiveThemeName] = useState('blue');
   const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
+  
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [iconModalProjectId, setIconModalProjectId] = useState(null);
+  const [editingProjectNameId, setEditingProjectNameId] = useState(null);
+  const [newProjectName, setNewProjectName] = useState('');
+  
+  const dashboardFileInputRef = useRef(null);
+  const iconFileInputRef = useRef(null);
 
   const isElectron = typeof window !== 'undefined' && window.navigator && /electron/i.test(window.navigator.userAgent.toLowerCase());
 
@@ -755,7 +785,7 @@ export default function App() {
       rootPath = result.rootPath;
     }
     const newProject = { 
-      id: Date.now(), name: `Proyecto ${projects.length + 1}`, rootPath,
+      id: Date.now().toString(), name: `Proyecto ${projects.length + 1}`, rootPath,
       lastModified: new Date().toISOString(), icon: { type: 'preset', value: 'FolderOpen' },
       documents: defaultDocuments, codes: defaultCodes, quotes: [], libraryFiles: [], 
       referenceGroups: [{id: 'mt', name: 'Marco Teórico'}, {id: 'mm', name: 'Marco Metodológico'}],
@@ -773,11 +803,130 @@ export default function App() {
     }
   };
 
+  const handleUpdateProjectName = (id) => {
+    if (newProjectName.trim()) setProjects(projects.map(p => p.id === id ? { ...p, name: newProjectName.trim() } : p));
+    setEditingProjectNameId(null);
+  };
+
+  const handleUpdateProjectIcon = (projectId, newIconConfig) => {
+    setProjects(projects.map(p => p.id === projectId ? { ...p, icon: newIconConfig } : p));
+    setIconModalProjectId(null);
+  };
+
+  const handleIconUpload = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === 'image/png') {
+      const reader = new FileReader();
+      reader.onload = (event) => handleUpdateProjectIcon(iconModalProjectId, { type: 'custom', value: event.target.result });
+      reader.readAsDataURL(file);
+    } else alert("Por favor sube un archivo con formato .PNG válido.");
+    e.target.value = null;
+  };
+
+  const handleExportProject = (project) => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(project, null, 2));
+    const link = document.createElement('a'); 
+    link.setAttribute("href", dataStr); 
+    link.setAttribute("download", `${project.name.replace(/\s+/g, '_')}_Backup.json`);
+    document.body.appendChild(link); 
+    link.click(); 
+    link.remove();
+  };
+
+  const handleImportProject = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const importedData = JSON.parse(event.target.result);
+        const newProject = { 
+          ...importedData, 
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 5), 
+          name: `${importedData.name || 'Proyecto Importado'} (Restaurado)`, 
+          lastModified: new Date().toISOString(), 
+          documents: Array.isArray(importedData.documents) ? importedData.documents : [],
+          codes: Array.isArray(importedData.codes) ? importedData.codes : [],
+          quotes: Array.isArray(importedData.quotes) ? importedData.quotes : [],
+          libraryFiles: Array.isArray(importedData.libraryFiles) ? importedData.libraryFiles : [],
+          references: Array.isArray(importedData.references) ? importedData.references : [],
+          referenceGroups: Array.isArray(importedData.referenceGroups) ? importedData.referenceGroups : [{id: 'mt', name: 'Marco Teórico'}, {id: 'mm', name: 'Marco Metodológico'}],
+          icon: importedData.icon || { type: 'preset', value: 'FolderOpen' } 
+        };
+        setProjects(prev => [newProject, ...prev]);
+        alert("✅ Proyecto restaurado exitosamente.");
+      } catch (err) { 
+        alert("❌ Error: El archivo no es un proyecto válido de LalibreINV (.json)."); 
+      }
+    };
+    reader.readAsText(file); 
+    e.target.value = null; 
+  };
+
+  const renderProjectIcon = (project) => {
+    if (project.icon?.type === 'custom') return <img src={project.icon.value} alt="Ícono" className="w-10 h-10 rounded-lg object-cover shadow-sm" />;
+    const IconComponent = PRESET_ICONS[project.icon?.value] || FolderOpen;
+    return <IconComponent className={`w-10 h-10 ${theme.text}`} />;
+  };
+
   if (view === 'dashboard') {
     return (
       <div className="min-h-screen bg-slate-50 font-sans select-none">
         
-        {/* MODAL: SOBRE EL AUTOR */}
+        {isSettingsOpen && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 w-[400px] max-w-full">
+              <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-3">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Settings className={`w-6 h-6 ${theme.text}`} /> Ajustes del Tema</h2>
+                <button onClick={() => setIsSettingsOpen(false)} className="text-gray-400 hover:text-gray-800 bg-gray-100 p-1.5 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="mb-6">
+                <p className="text-sm font-medium text-gray-600 mb-4">Color de acento de la interfaz:</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {Object.values(THEMES).map((t) => (
+                    <button key={t.id} onClick={() => setActiveThemeName(t.id)} className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${activeThemeName === t.id ? `border-gray-800 bg-gray-50 shadow-md transform scale-105` : 'border-gray-100 hover:border-gray-300 hover:bg-gray-50'}`}>
+                      <div className={`w-8 h-8 rounded-full shadow-inner mb-2 bg-gradient-to-br from-white/20 to-black/20`} style={{ backgroundColor: t.colorCode }}></div>
+                      <span className="text-xs font-semibold text-gray-700">{t.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button onClick={() => setIsSettingsOpen(false)} className={`w-full py-3 ${theme.bg} text-white rounded-xl font-semibold hover:opacity-90 transition-opacity shadow-md`}>Guardar Cambios</button>
+            </div>
+          </div>
+        )}
+
+        {iconModalProjectId && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 w-[450px] max-w-full">
+              <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-3">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2"><ImagePlus className={`w-6 h-6 ${theme.text}`} /> Cambiar Ícono</h2>
+                <button onClick={() => setIconModalProjectId(null)} className="text-gray-400 hover:text-gray-800 bg-gray-100 p-1.5 rounded-full"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="mb-6">
+                <p className="text-sm font-medium text-gray-600 mb-3">Galería integrada:</p>
+                <div className="grid grid-cols-4 gap-3">
+                  {Object.keys(PRESET_ICONS).map((iconKey) => {
+                    const IconComp = PRESET_ICONS[iconKey];
+                    return (
+                      <button key={iconKey} onClick={() => handleUpdateProjectIcon(iconModalProjectId, { type: 'preset', value: iconKey })} className={`flex items-center justify-center p-4 bg-gray-50 border border-gray-200 rounded-xl hover:${theme.bg} hover:border-transparent group transition-all duration-200 hover:shadow-md`}>
+                        <IconComp className={`w-7 h-7 text-gray-600 group-hover:text-white transition-colors`} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="border-t border-gray-100 pt-5">
+                <p className="text-sm font-medium text-gray-600 mb-3">Subir imagen personalizada:</p>
+                <input type="file" accept="image/png" ref={iconFileInputRef} onChange={handleIconUpload} className="hidden" />
+                <button onClick={() => iconFileInputRef.current.click()} className={`w-full flex items-center justify-center gap-2 py-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 hover:${theme.borderFocus} hover:${theme.lightBg} hover:${theme.text} transition-all font-medium`}>
+                  <Upload className="w-5 h-5" /> Seleccionar archivo .PNG
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isAuthorModalOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
             <div className="bg-white rounded-3xl shadow-2xl w-[450px] overflow-hidden flex flex-col transform transition-all text-center">
@@ -808,11 +957,22 @@ export default function App() {
              <img src="./LALIBRE.png" alt="Logo" className="w-12 h-12" />
              <div><h1 className="text-2xl font-black text-slate-900 tracking-tight">LalibreINV <span className="text-slate-400 font-normal">PRO</span></h1><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Workspace de Investigación</p></div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg border border-green-200 text-xs font-bold mr-2" title="Tus datos se guardan automáticamente en tu carpeta local.">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg border border-green-200 text-xs font-bold mr-2" title="Tus datos se guardan automáticamente.">
               <Check className="w-3.5 h-3.5" /> Auto-guardado
             </div>
-            <button onClick={() => setIsAuthorModalOpen(true)} className="flex items-center gap-2 px-4 py-3 text-slate-500 bg-slate-50 hover:bg-slate-100 rounded-2xl font-semibold transition-colors border border-slate-200 shadow-sm"><Info className="w-5 h-5" /> Autor</button>
+            
+            <button onClick={() => setIsSettingsOpen(true)} className="p-2.5 text-slate-500 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-colors border border-slate-200 shadow-sm" title="Ajustes de Tema">
+              <Settings className="w-5 h-5" />
+            </button>
+            
+            <input type="file" accept=".json" ref={dashboardFileInputRef} onChange={handleImportProject} className="hidden" />
+            
+            <button onClick={() => dashboardFileInputRef.current.click()} className="flex items-center gap-2 px-4 py-2.5 text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl font-semibold shadow-sm transition-colors" title="Restaurar un respaldo completo (.json)">
+              <Upload className="w-4 h-4" /> Restaurar Respaldo (.json)
+            </button>
+
+            <button onClick={() => setIsAuthorModalOpen(true)} className="flex items-center gap-2 px-4 py-2.5 text-slate-500 bg-slate-50 hover:bg-slate-100 rounded-2xl font-semibold transition-colors border border-slate-200 shadow-sm"><Info className="w-5 h-5" /> Autor</button>
             <button onClick={handleCreateProject} className={`flex items-center gap-2 px-6 py-3 ${theme.gradient} text-white rounded-2xl font-bold shadow-lg hover:opacity-90 transition-all`}><FolderPlus className="w-5 h-5" /> Nuevo Proyecto</button>
           </div>
         </header>
@@ -822,16 +982,40 @@ export default function App() {
             <div className="text-center py-24 bg-white rounded-3xl border border-gray-200 border-dashed max-w-2xl mx-auto shadow-sm mt-10">
               <div className={`${theme.lightBg} w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6`}><FolderOpen className={`w-12 h-12 ${theme.text}`} /></div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Tu espacio de trabajo está vacío</h2>
-              <p className="text-gray-500 mb-8 max-w-md mx-auto">Crea un proyecto nuevo haciendo clic en el botón superior para comenzar a organizar tu investigación.</p>
+              <p className="text-gray-500 mb-8 max-w-md mx-auto">Crea un proyecto nuevo o importa un respaldo JSON para comenzar a organizar tu investigación.</p>
               <button onClick={handleCreateProject} className={`px-6 py-3 ${theme.gradient} text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all`}>Comenzar mi primer proyecto</button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {projects.map(p => (
                 <div key={p.id} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-2xl transition-all cursor-default group transform hover:-translate-y-1 relative">
-                  <button onClick={() => confirmDeleteProject(p.id, p.name)} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all z-10"><Trash2 className="w-4 h-4" /></button>
-                  <div className={`${theme.iconBg} w-14 h-14 rounded-2xl flex items-center justify-center mb-6`}><FolderOpen className={theme.text} /></div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-1 truncate pr-6">{p.name}</h3>
+                  
+                  <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10 bg-white/90 p-1 rounded-lg backdrop-blur-sm shadow-sm border border-gray-100">
+                    <button onClick={() => handleExportProject(p)} className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors" title="Descargar Respaldo (.json)"><Download className="w-4 h-4" /></button>
+                    <button onClick={() => confirmDeleteProject(p.id, p.name)} className="text-slate-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors" title="Eliminar Proyecto"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+
+                  <div className="flex items-start justify-between mb-5">
+                    <button onClick={() => setIconModalProjectId(p.id)} className={`${theme.iconBg} p-3.5 rounded-xl relative overflow-hidden hover:shadow-md transition-all group/icon`}>
+                      {renderProjectIcon(p)}
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/icon:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-[2px]">
+                        <Pencil className="w-5 h-5 text-white drop-shadow-md" />
+                      </div>
+                    </button>
+                  </div>
+
+                  {editingProjectNameId === p.id ? (
+                    <div className="flex gap-2 mb-3">
+                      <input autoFocus type="text" value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUpdateProjectName(p.id)} className={`flex-1 px-3 py-1.5 text-sm font-semibold border-2 rounded-lg ${theme.borderFocus} focus:outline-none`}/>
+                      <button onClick={() => handleUpdateProjectName(p.id)} className="bg-green-100 text-green-700 p-1.5 rounded-lg hover:bg-green-200"><Check className="w-5 h-5"/></button>
+                    </div>
+                  ) : (
+                    <h3 className="text-lg font-bold text-slate-800 mb-1 pr-16 flex items-start gap-2 leading-tight">
+                      <span className="truncate" title={p.name}>{p.name}</span>
+                      <button onClick={() => { setEditingProjectNameId(p.id); setNewProjectName(p.name); }} className={`opacity-0 group-hover:opacity-100 shrink-0 text-slate-300 hover:${theme.text} transition-opacity pt-1`}><Pencil className="w-3.5 h-3.5" /></button>
+                    </h3>
+                  )}
+
                   <p className="text-xs text-slate-400 font-medium mb-6">Modificado: {new Date(p.lastModified).toLocaleDateString()}</p>
                   {p.rootPath && <div className="bg-slate-50 p-3 rounded-xl mb-6 flex items-center gap-2"><HardDrive className="w-3 h-3 text-slate-400 shrink-0" /><span className="text-[10px] text-slate-500 font-mono truncate" title={p.rootPath}>{p.rootPath}</span></div>}
                   <button onClick={() => { setActiveProjectId(p.id); setView('editor'); }} className={`w-full py-3 ${theme.bg} text-white rounded-xl font-bold text-sm shadow-md hover:opacity-90 transition-opacity`}>Abrir Espacio</button>
@@ -848,7 +1032,7 @@ export default function App() {
   
   return (
     <ErrorBoundary>
-      <ProjectEditor project={activeProject} onBack={() => setView('dashboard')} onUpdateProject={handleUpdateProjectData} theme={theme} isElectron={isElectron} />
+      <ProjectEditor key={activeProject?.id} project={activeProject} onBack={() => setView('dashboard')} onUpdateProject={handleUpdateProjectData} theme={theme} isElectron={isElectron} />
     </ErrorBoundary>
   );
-}
+}//gracias: COMPILADO POR FRANCISCO JOEL, ESPERANDO QUE PUEDA AYUDAR A LOS INVESTIGADORES DEL MUNDO
