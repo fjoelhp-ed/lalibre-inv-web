@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import electron from 'vite-plugin-electron'
 
 export default defineConfig({
+  base: './', // línea  que evita la pantalla en blanco
   plugins: [
     react(),
     VitePWA({ 
