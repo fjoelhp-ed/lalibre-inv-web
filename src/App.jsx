@@ -688,7 +688,7 @@ function ProjectEditor({ project, onBack, onUpdateProject, theme, isElectron }) 
           </div>
           
           <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center pl-6">
-            <h2 className="font-bold text-gray-700 flex items-center gap-2"><QuoteIcon className="w-4 h-4" /> Resultados</h2>
+            <h2 className="font-bold text-gray-700 flex items-center gap-2"><Quote className="w-4 h-4" /> Resultados</h2>
             <button onClick={handleExportReport} className="bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-700 transition-colors shadow-sm">
               <FileDown className="w-3.5 h-3.5" /> Reporte
             </button>
